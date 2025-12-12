@@ -389,6 +389,13 @@
       log("Не нашли модалку после клика, пропускаем карточку");
       return false;
     }
+    if (isOnResponsePage()) {
+      log("После клика оказались на странице отклика, возвращаемся");
+      markNavigationOnly(cardKey);
+      await returnToSearch(initialUrl);
+      markCardSeen(cardKey);
+      return false;
+    }
     await delay(TIMING.modalPause);
 
     if (!state.coverLetter && isCoverLetterRequired(modal)) {
@@ -445,6 +452,10 @@
         if (closeBtn) {
           closeBtn.click();
           await delay(TIMING.shortAction);
+        }
+        if (isOnResponsePage()) {
+          markNavigationOnly(cardKey);
+          await returnToSearch(initialUrl);
         }
         return false;
       }
