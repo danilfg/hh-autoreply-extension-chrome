@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>HH Auto Response (tg @aqa_pro_mentor)</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 12px;
+      width: 320px;
+      color: #0f172a;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      margin: 8px 0 4px;
+      color: #334155;
+    }
+    textarea, input[type="number"] {
+      box-sizing: border-box;
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 13px;
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    button {
+      flex: 1;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    #start-btn {
+      background: #10b981;
+      color: #fff;
+    }
+    #stop-btn {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .status {
+      margin-top: 10px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .status[data-kind="error"] {
+      color: #b91c1c;
+    }
+    .status[data-kind="success"] {
+      color: #0f766e;
+    }
+  </style>
+</head>
+<body>
+  <h1>Автоотклик HH</h1>
+  <form id="auto-form">
+    <label for="cover-letter">Сопроводительное письмо (необязательно)</label>
+    <textarea id="cover-letter" placeholder="Текст будет вставлен в модальном окне"></textarea>
+
+    <label for="responses-count">Количество откликов (по умолчанию 200)</label>
+    <input id="responses-count" type="number" min="1" value="200">
+
+    <div class="actions">
+      <button id="start-btn" type="submit">Старт</button>
+      <button id="stop-btn" type="button">Стоп</button>
+    </div>
+  </form>
+
+  <div id="status" class="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "HH Auto Response (tg @aqa_pro_mentor)",
+  "description": "Автоматический отклик на вакансии на hh.ru с сопроводительным письмом. По всем вопросам tg @aqa_pro_mentor",
+  "version": "1.0.0",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "HH Auto Response (tg @aqa_pro_mentor)"
+  },
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://hh.ru/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://hh.ru/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
