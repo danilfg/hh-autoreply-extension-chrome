@@ -318,6 +318,31 @@
     return Array.from(document.querySelectorAll(SELECTORS.vacancyCard));
   }
 
+  function extractVacancyInfo(card) {
+    const titleLink =
+      card.querySelector('[data-qa="serp-item__title"]') ||
+      card.querySelector('a[href*="/vacancy/"]');
+    const title =
+      (titleLink?.textContent || "").trim() ||
+      (card.querySelector('[data-qa="serp-item__title-text"]')?.textContent || "").trim();
+    let id = null;
+    if (titleLink?.href) {
+      try {
+        const url = new URL(titleLink.href, window.location.origin);
+        const match = url.pathname.match(/\/vacancy\/(\d+)/);
+        id = match ? match[1] : url.pathname;
+      } catch (_) {
+        id = titleLink.href;
+      }
+    }
+    if (!id) {
+      const rawId = card.getAttribute("id") || "";
+      const matchId = rawId.match(/(\d{5,})/);
+      id = matchId ? matchId[1] : rawId || "unknown";
+    }
+    return { title, id };
+  }
+
   function findApplyButton(card) {
     const dataQaButton = card.querySelector(SELECTORS.applyButtonByDataQa);
     if (dataQaButton) return dataQaButton;
@@ -331,6 +356,7 @@
     const applyButton = findApplyButton(card);
     if (!applyButton) return false;
     const cardKey = getCardKey(card);
+    const vacancyInfo = extractVacancyInfo(card);
     if (isNavigationOnly(cardKey)) {
       log("Карточка ведёт на страницу отклика, пропускаем", cardKey);
       return false;
@@ -469,6 +495,10 @@
     if (!closed) {
       log("Модалка не закрылась вовремя, продолжаем дальше");
     }
+
+    log(
+      `Отклик отправлен: ${vacancyInfo.title || "без названия"} - ${vacancyInfo.id}`
+    );
     return true;
   }
 
