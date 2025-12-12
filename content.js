@@ -9,7 +9,8 @@
     startedAt: null,
     lastFinishedAt: null,
     lastListUrl: null,
-    seenCardKeys: []
+    seenCardKeys: [],
+    navigationOnly: []
   };
 
   const TIMING = {
@@ -36,6 +37,7 @@
 
   let state = loadState();
   let seenSet = new Set(state.seenCardKeys || []);
+  let navigationOnlySet = new Set(state.navigationOnly || []);
   let isRunning = false;
 
   function log(...args) {
@@ -66,6 +68,9 @@
     if (patch.seenCardKeys) {
       seenSet = new Set(patch.seenCardKeys);
     }
+    if (patch.navigationOnly) {
+      navigationOnlySet = new Set(patch.navigationOnly);
+    }
     persist();
   }
 
@@ -79,6 +84,7 @@
     const coverLetter = (options.coverLetter || "").trim();
     const targetCount = sanitizeTargetCount(options.targetCount);
     seenSet = new Set();
+    navigationOnlySet = new Set();
     updateState({
       active: true,
       targetCount,
@@ -87,7 +93,8 @@
       status: "running",
       startedAt: Date.now(),
       lastListUrl: window.location.href,
-      seenCardKeys: []
+      seenCardKeys: [],
+      navigationOnly: []
     });
     ensureRunner();
     return { ok: true, state };
@@ -240,6 +247,18 @@
     }
   }
 
+  function isNavigationOnly(key) {
+    return key ? navigationOnlySet.has(key) : false;
+  }
+
+  function markNavigationOnly(key) {
+    if (!key) return;
+    if (!navigationOnlySet.has(key)) {
+      navigationOnlySet.add(key);
+      updateState({ navigationOnly: Array.from(navigationOnlySet) });
+    }
+  }
+
   async function returnToSearch(initialUrl) {
     if (!isOnResponsePage()) return;
 
@@ -262,14 +281,14 @@
 
     const candidates = [
       state.lastListUrl,
-      initialUrl,
       hadReferrer ? document.referrer : null,
-      "https://hh.ru/search/vacancy"
+      initialUrl,
+      window.location.origin + "/search/vacancy"
     ].filter(Boolean);
 
     const targetUrl =
       candidates.find((url) => !isOnResponsePage(url)) ||
-      "https://hh.ru/search/vacancy";
+      window.location.origin + "/search/vacancy";
 
     updateState({ lastListUrl: targetUrl });
     log("Принудительно возвращаемся с /applicant/vacancy_response на", targetUrl);
@@ -312,6 +331,10 @@
     const applyButton = findApplyButton(card);
     if (!applyButton) return false;
     const cardKey = getCardKey(card);
+    if (isNavigationOnly(cardKey)) {
+      log("Карточка ведёт на страницу отклика, пропускаем", cardKey);
+      return false;
+    }
     if (isCardSeen(cardKey)) {
       log("Уже обрабатывали карточку, пропускаем", cardKey);
       return false;
@@ -330,6 +353,7 @@
     );
     if (navigated) {
       log("Кнопка увела на отдельную страницу отклика, возвращаемся назад");
+      markNavigationOnly(cardKey);
       await returnToSearch(initialUrl);
       markCardSeen(cardKey);
       return false;
@@ -436,6 +460,7 @@
 
     if (navigatedAway()) {
       log("После отправки отклика страница увела на /applicant/vacancy_response, возвращаемся");
+      markNavigationOnly(cardKey);
       await returnToSearch(state.lastListUrl || initialUrl);
       markCardSeen(cardKey);
       return false;
