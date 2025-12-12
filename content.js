@@ -226,14 +226,21 @@
   }
 
   async function returnToSearch(initialUrl) {
-    const targetUrl =
-      state.lastListUrl ||
-      initialUrl ||
-      document.referrer ||
-      "https://hh.ru/search/vacancy";
-
     if (!isOnResponsePage()) return;
 
+    const candidates = [
+      state.lastListUrl,
+      initialUrl,
+      document.referrer,
+      "https://hh.ru/search/vacancy"
+    ].filter(Boolean);
+
+    const targetUrl =
+      candidates.find(
+        (url) => !url.includes("/applicant/vacancy_response")
+      ) || "https://hh.ru/search/vacancy";
+
+    updateState({ lastListUrl: targetUrl });
     log("Возвращаемся с /applicant/vacancy_response на", targetUrl);
     window.location.href = targetUrl;
     await waitForCondition(() => !isOnResponsePage(), 8000, 200);
@@ -306,12 +313,20 @@
     }
 
     if (state.coverLetter) {
-      const addButton = findElementByText(modal, SELECTORS.addCoverLetterText);
-      if (addButton) {
-        addButton.click();
-        await delay(TIMING.shortAction);
+      let textarea = modal.querySelector(SELECTORS.coverLetterInput);
+      if (!textarea) {
+        const addButton =
+          findElementByText(modal, SELECTORS.addCoverLetterText) ||
+          findElementByText(modal, "Сопроводительное");
+        if (addButton) {
+          addButton.click();
+          await delay(TIMING.shortAction);
+          textarea = modal.querySelector(SELECTORS.coverLetterInput);
+        }
       }
-      const textarea = modal.querySelector(SELECTORS.coverLetterInput);
+      if (!textarea) {
+        textarea = document.querySelector(SELECTORS.coverLetterInput);
+      }
       if (textarea) {
         textarea.focus();
         textarea.value = state.coverLetter;
