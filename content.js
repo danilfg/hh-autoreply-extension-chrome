@@ -203,8 +203,12 @@
     return text.includes("обязател") || text.includes("обязательное поле");
   }
 
-  function isOnResponsePage() {
-    return window.location.pathname.includes("/applicant/vacancy_response");
+  function isOnResponsePage(url) {
+    const href =
+      typeof url === "string"
+        ? url
+        : url?.href || window.location.href || window.location.pathname;
+    return href.includes("/applicant/vacancy_response");
   }
 
   function getCardKey(card) {
@@ -239,21 +243,37 @@
   async function returnToSearch(initialUrl) {
     if (!isOnResponsePage()) return;
 
+    // Попробуем history.back(), если есть куда вернуться
+    const hadReferrer = document.referrer && !isOnResponsePage(document.referrer);
+    if (hadReferrer) {
+      log("Пробуем вернуться history.back()");
+      window.history.back();
+      const backOk = await waitForCondition(
+        () => !isOnResponsePage(),
+        3000,
+        150
+      );
+      if (backOk) {
+        updateState({ lastListUrl: window.location.href });
+        await delay(TIMING.shortAction);
+        return;
+      }
+    }
+
     const candidates = [
       state.lastListUrl,
       initialUrl,
-      document.referrer,
+      hadReferrer ? document.referrer : null,
       "https://hh.ru/search/vacancy"
     ].filter(Boolean);
 
     const targetUrl =
-      candidates.find(
-        (url) => !url.includes("/applicant/vacancy_response")
-      ) || "https://hh.ru/search/vacancy";
+      candidates.find((url) => !isOnResponsePage(url)) ||
+      "https://hh.ru/search/vacancy";
 
     updateState({ lastListUrl: targetUrl });
-    log("Возвращаемся с /applicant/vacancy_response на", targetUrl);
-    window.location.href = targetUrl;
+    log("Принудительно возвращаемся с /applicant/vacancy_response на", targetUrl);
+    window.location.replace(targetUrl);
     await waitForCondition(() => !isOnResponsePage(), 8000, 200);
     await delay(TIMING.shortAction);
   }
@@ -263,6 +283,16 @@
     return Array.from(
       root.querySelectorAll("button, [role='button'], a, span, div")
     ).find((el) => (el.textContent || "").toLowerCase().includes(lower));
+  }
+
+  function findAddLetterButton(root) {
+    return (
+      root.querySelector(
+        'button[data-qa*="letter"], button[data-qa*="cover"], [role="button"][data-qa*="letter"]'
+      ) ||
+      findElementByText(root, SELECTORS.addCoverLetterText) ||
+      findElementByText(root, "Сопроводительное")
+    );
   }
 
   function getVacancyCards() {
@@ -327,17 +357,16 @@
       let textarea = modal.querySelector(SELECTORS.coverLetterInput);
       if (!textarea) {
         const addButton =
-          findElementByText(modal, SELECTORS.addCoverLetterText) ||
-          findElementByText(modal, "Сопроводительное");
+          findAddLetterButton(modal) || findAddLetterButton(document);
         if (addButton) {
           addButton.click();
-          await delay(TIMING.shortAction);
+          await delay(TIMING.shortAction + 150);
           textarea =
             modal.querySelector(SELECTORS.coverLetterInput) ||
             (await waitForElement(
-              modal,
+              document,
               SELECTORS.coverLetterInput,
-              2000,
+              3000,
               100
             ));
         }
@@ -348,7 +377,7 @@
           (await waitForElement(
             document,
             SELECTORS.coverLetterInput,
-            2000,
+            3000,
             100
           ));
       }
