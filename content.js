@@ -8,7 +8,8 @@
     status: "idle",
     startedAt: null,
     lastFinishedAt: null,
-    lastListUrl: null
+    lastListUrl: null,
+    seenCardKeys: []
   };
 
   const TIMING = {
@@ -34,6 +35,7 @@
   };
 
   let state = loadState();
+  let seenSet = new Set(state.seenCardKeys || []);
   let isRunning = false;
 
   function log(...args) {
@@ -61,6 +63,9 @@
 
   function updateState(patch) {
     state = { ...state, ...patch };
+    if (patch.seenCardKeys) {
+      seenSet = new Set(patch.seenCardKeys);
+    }
     persist();
   }
 
@@ -73,6 +78,7 @@
   function startAutomation(options = {}) {
     const coverLetter = (options.coverLetter || "").trim();
     const targetCount = sanitizeTargetCount(options.targetCount);
+    seenSet = new Set();
     updateState({
       active: true,
       targetCount,
@@ -80,7 +86,8 @@
       sentCount: 0,
       status: "running",
       startedAt: Date.now(),
-      lastListUrl: window.location.href
+      lastListUrl: window.location.href,
+      seenCardKeys: []
     });
     ensureRunner();
     return { ok: true, state };
@@ -189,6 +196,35 @@
     return window.location.pathname.includes("/applicant/vacancy_response");
   }
 
+  function getCardKey(card) {
+    const titleLink =
+      card.querySelector('[data-qa="serp-item__title"]') ||
+      card.querySelector('a[href*="/vacancy/"]');
+    if (titleLink?.href) {
+      try {
+        const url = new URL(titleLink.href, window.location.origin);
+        return url.pathname;
+      } catch (_) {
+        return titleLink.href;
+      }
+    }
+    const id = card.getAttribute("id");
+    if (id) return id;
+    return card.textContent?.slice(0, 120) || "";
+  }
+
+  function isCardSeen(key) {
+    return key ? seenSet.has(key) : false;
+  }
+
+  function markCardSeen(key) {
+    if (!key) return;
+    if (!seenSet.has(key)) {
+      seenSet.add(key);
+      updateState({ seenCardKeys: Array.from(seenSet) });
+    }
+  }
+
   async function returnToSearch(initialUrl) {
     const targetUrl =
       state.lastListUrl ||
@@ -227,6 +263,12 @@
   async function processCard(card) {
     const applyButton = findApplyButton(card);
     if (!applyButton) return false;
+    const cardKey = getCardKey(card);
+    if (isCardSeen(cardKey)) {
+      log("Уже обрабатывали карточку, пропускаем", cardKey);
+      return false;
+    }
+    markCardSeen(cardKey);
 
     applyButton.scrollIntoView({ behavior: "smooth", block: "center" });
     await delay(TIMING.shortAction);
@@ -241,6 +283,7 @@
     if (navigated) {
       log("Кнопка увела на отдельную страницу отклика, возвращаемся назад");
       await returnToSearch(initialUrl);
+      markCardSeen(cardKey);
       return false;
     }
 
@@ -315,6 +358,7 @@
     if (navigatedAway()) {
       log("После отправки отклика страница увела на /applicant/vacancy_response, возвращаемся");
       await returnToSearch(state.lastListUrl || initialUrl);
+      markCardSeen(cardKey);
       return false;
     }
 
