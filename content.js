@@ -7,7 +7,8 @@
     coverLetter: "",
     status: "idle",
     startedAt: null,
-    lastFinishedAt: null
+    lastFinishedAt: null,
+    lastListUrl: null
   };
 
   const TIMING = {
@@ -78,7 +79,8 @@
       coverLetter,
       sentCount: 0,
       status: "running",
-      startedAt: Date.now()
+      startedAt: Date.now(),
+      lastListUrl: window.location.href
     });
     ensureRunner();
     return { ok: true, state };
@@ -183,7 +185,7 @@
   async function returnToSearch(initialUrl) {
     log("Пробуем вернуться назад после перехода на страницу отклика");
     window.history.back();
-    const backOk = await waitForCondition(() => !isOnResponsePage(), 4000, 200);
+    const backOk = await waitForCondition(() => !isOnResponsePage(), 6000, 200);
     if (backOk) {
       await delay(TIMING.shortAction);
       return;
@@ -191,11 +193,7 @@
     if (initialUrl) {
       log("history.back() не вернул, открываем исходную страницу выдачи");
       window.location.href = initialUrl;
-      await waitForCondition(
-        () => !isOnResponsePage() && window.location.href === initialUrl,
-        5000,
-        200
-      );
+      await waitForCondition(() => !isOnResponsePage(), 8000, 200);
       await delay(TIMING.shortAction);
     }
   }
@@ -227,6 +225,7 @@
     applyButton.scrollIntoView({ behavior: "smooth", block: "center" });
     await delay(TIMING.shortAction);
     const initialUrl = window.location.href;
+    updateState({ lastListUrl: initialUrl });
     applyButton.click();
 
     const { modal, navigated } = await waitForModalOrNavigation(
@@ -385,6 +384,10 @@
   });
 
   if (state.active) {
+    if (isOnResponsePage()) {
+      log("Активное состояние и мы на странице отклика, возвращаемся назад");
+      returnToSearch(state.lastListUrl || document.referrer || null);
+    }
     log("Найдено активное состояние в sessionStorage, продолжаем работу");
     ensureRunner();
   }
