@@ -190,19 +190,18 @@
   }
 
   async function returnToSearch(initialUrl) {
-    log("Пробуем вернуться назад после перехода на страницу отклика");
-    window.history.back();
-    const backOk = await waitForCondition(() => !isOnResponsePage(), 6000, 200);
-    if (backOk) {
-      await delay(TIMING.shortAction);
-      return;
-    }
-    if (initialUrl) {
-      log("history.back() не вернул, открываем исходную страницу выдачи");
-      window.location.href = initialUrl;
-      await waitForCondition(() => !isOnResponsePage(), 8000, 200);
-      await delay(TIMING.shortAction);
-    }
+    const targetUrl =
+      state.lastListUrl ||
+      initialUrl ||
+      document.referrer ||
+      "https://hh.ru/search/vacancy";
+
+    if (!isOnResponsePage()) return;
+
+    log("Возвращаемся с /applicant/vacancy_response на", targetUrl);
+    window.location.href = targetUrl;
+    await waitForCondition(() => !isOnResponsePage(), 8000, 200);
+    await delay(TIMING.shortAction);
   }
 
   function findElementByText(root, text) {
@@ -326,6 +325,7 @@
     );
     if (nextLink && nextLink.href) {
       log("Переходим на следующую страницу", nextLink.href);
+      updateState({ lastListUrl: nextLink.href });
       window.location.href = nextLink.href;
       return true;
     }
@@ -403,7 +403,9 @@
   });
 
   if (state.active) {
-    if (isOnResponsePage()) {
+    if (!isOnResponsePage()) {
+      updateState({ lastListUrl: window.location.href });
+    } else {
       log("Активное состояние и мы на странице отклика, возвращаемся назад");
       returnToSearch(state.lastListUrl || document.referrer || null);
     }
