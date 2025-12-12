@@ -178,6 +178,13 @@
     });
   }
 
+  function isCoverLetterRequired(modal) {
+    if (!modal) return false;
+    const helper = modal.querySelector('[data-qa="form-helper-description"]');
+    const text = (helper?.textContent || "").toLowerCase();
+    return text.includes("обязател") || text.includes("обязательное поле");
+  }
+
   function isOnResponsePage() {
     return window.location.pathname.includes("/applicant/vacancy_response");
   }
@@ -243,6 +250,18 @@
       return false;
     }
     await delay(TIMING.modalPause);
+
+    if (!state.coverLetter && isCoverLetterRequired(modal)) {
+      log("Сопроводительное обязательно, а текст не задан — пропускаем карточку");
+      const closeBtn =
+        modal.querySelector('[data-qa="response-popup-close"]') ||
+        document.querySelector('[data-qa="response-popup-close"]');
+      if (closeBtn) {
+        closeBtn.click();
+        await delay(TIMING.shortAction);
+      }
+      return false;
+    }
 
     if (state.coverLetter) {
       const addButton = findElementByText(modal, SELECTORS.addCoverLetterText);
