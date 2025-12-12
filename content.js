@@ -185,6 +185,17 @@
     });
   }
 
+  function waitForElement(root, selector, timeout = 2000, interval = 100) {
+    return waitForCondition(
+      () => {
+        const el = root.querySelector(selector);
+        return el || false;
+      },
+      timeout,
+      interval
+    ).then((found) => (found === true ? root.querySelector(selector) : found));
+  }
+
   function isCoverLetterRequired(modal) {
     if (!modal) return false;
     const helper = modal.querySelector('[data-qa="form-helper-description"]');
@@ -321,11 +332,25 @@
         if (addButton) {
           addButton.click();
           await delay(TIMING.shortAction);
-          textarea = modal.querySelector(SELECTORS.coverLetterInput);
+          textarea =
+            modal.querySelector(SELECTORS.coverLetterInput) ||
+            (await waitForElement(
+              modal,
+              SELECTORS.coverLetterInput,
+              2000,
+              100
+            ));
         }
       }
       if (!textarea) {
-        textarea = document.querySelector(SELECTORS.coverLetterInput);
+        textarea =
+          document.querySelector(SELECTORS.coverLetterInput) ||
+          (await waitForElement(
+            document,
+            SELECTORS.coverLetterInput,
+            2000,
+            100
+          ));
       }
       if (textarea) {
         textarea.focus();
@@ -333,6 +358,16 @@
         textarea.dispatchEvent(new Event("input", { bubbles: true }));
         textarea.dispatchEvent(new Event("change", { bubbles: true }));
         await delay(TIMING.coverLetter);
+      } else {
+        log("Не нашли поле сопроводительного, пропускаем карточку");
+        const closeBtn =
+          modal.querySelector('[data-qa="response-popup-close"]') ||
+          document.querySelector('[data-qa="response-popup-close"]');
+        if (closeBtn) {
+          closeBtn.click();
+          await delay(TIMING.shortAction);
+        }
+        return false;
       }
     }
 
