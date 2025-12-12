@@ -393,6 +393,13 @@
     );
 
     while (state.active && state.sentCount < state.targetCount) {
+      if (isOnResponsePage()) {
+        log("На странице отклика, возвращаемся к выдаче и продолжаем");
+        await returnToSearch(state.lastListUrl || window.location.href);
+        await delay(TIMING.shortAction);
+        continue;
+      }
+
       const cards = getVacancyCards();
       let processedOnPage = false;
 
@@ -419,6 +426,13 @@
       if (moved) {
         // После перехода состояние сохранится в sessionStorage, контент-скрипт продолжит на новой странице.
         return;
+      }
+
+      if (isOnResponsePage()) {
+        log("На странице отклика, пытаемся вернуться и не останавливаемся");
+        await returnToSearch(state.lastListUrl || window.location.href);
+        await delay(TIMING.shortAction);
+        continue;
       }
 
       // Нет следующей страницы — останавливаемся.
