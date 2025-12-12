@@ -300,14 +300,23 @@
 
     submitButton.click();
 
+    const navigatedAway = () => isOnResponsePage();
+
     const closed = await waitForCondition(
       () =>
+        navigatedAway() ||
         !document.contains(modal) ||
         modal.getAttribute("aria-hidden") === "true" ||
         !document.querySelector(SELECTORS.modalContainer),
       7000,
       200
     );
+
+    if (navigatedAway()) {
+      log("После отправки отклика страница увела на /applicant/vacancy_response, возвращаемся");
+      await returnToSearch(state.lastListUrl || initialUrl);
+      return false;
+    }
 
     if (!closed) {
       log("Модалка не закрылась вовремя, продолжаем дальше");
