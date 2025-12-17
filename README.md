@@ -4,6 +4,10 @@
 
 Расширение для автоматического отклика на вакансии на hh.ru с учётом сопроводительного письма и лимита количества откликов.
 
+## Как работает
+![gif_hh_auto_response_linkedin_gif](https://github.com/user-attachments/assets/e11989fb-cad0-4d87-b87e-fc9a6f31955e)
+
+
 ## Для пользователя
 ### Как скачать
 1. Нажми на Code -> Download ZIP
